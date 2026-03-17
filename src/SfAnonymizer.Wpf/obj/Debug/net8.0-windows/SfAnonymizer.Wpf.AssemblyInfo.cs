@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ITSMTicketAnonymizer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a0df35733b7071018dab906dc76b43ab0c8d3a7f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+277ec62bcea7986968ab3734e276b594e82031cc")]
 [assembly: System.Reflection.AssemblyProductAttribute("ITSMTicketAnonymizer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ITSMTicketAnonymizer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
