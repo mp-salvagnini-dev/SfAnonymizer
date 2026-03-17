@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SfAnonymizer.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f587f60f6890c7004d8118bebdd6a7277268f2ae")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a445e462be4b356e3df964bf4efa60c2af4cc254")]
 [assembly: System.Reflection.AssemblyProductAttribute("SfAnonymizer.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SfAnonymizer.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
