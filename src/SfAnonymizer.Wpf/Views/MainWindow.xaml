@@ -21,6 +21,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -36,7 +37,24 @@
 
         <!-- ═══ FILE INPUT ROW ═══ -->
         <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,12">
-            <Grid>
+            <StackPanel>
+                <!-- Step label -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Border Background="{StaticResource PrimaryBrush}" CornerRadius="10"
+                            Padding="8,2" Margin="0,0,8,0">
+                        <TextBlock Text="STEP 1" FontSize="10" FontWeight="Bold" Foreground="White" />
+                    </Border>
+                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                               Foreground="{StaticResource SubtleTextBrush}">
+                        <Run Text="Load your file — " />
+                        <Run Text="original data" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
+                        <Run Text=" to anonymize, or an " />
+                        <Run Text="already anonymized file" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        <Run Text=" to restore." />
+                    </TextBlock>
+                </StackPanel>
+
+                <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -84,10 +102,67 @@
                         Command="{Binding ParseFileCommand}"
                         IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
             </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ TRANSCODE FILE ROW (visible after file is loaded) ═══ -->
+        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,0,0,12"
+                Visibility="{Binding IsFileLoaded, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <!-- Step label -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="10"
+                            Padding="8,2" Margin="0,0,8,0">
+                        <TextBlock Text="STEP 2 — OPTIONAL" FontSize="10" FontWeight="Bold" Foreground="White" />
+                    </Border>
+                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                               Foreground="{StaticResource SubtleTextBrush}">
+                        <Run Text="To " />
+                        <Run Text="restore original data" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        <Run Text=": load the transcode table that was exported alongside the anonymized file." />
+                    </TextBlock>
+                </StackPanel>
+
+                <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Transcode Table:"
+                           VerticalAlignment="Center" FontSize="12"
+                           Foreground="{StaticResource SubtleTextBrush}"
+                           Margin="0,0,10,0" />
+
+                <TextBox Grid.Column="1"
+                         Text="{Binding TranscodeFilePath, UpdateSourceTrigger=PropertyChanged}"
+                         VerticalContentAlignment="Center"
+                         Padding="8,6" FontSize="12"
+                         IsReadOnly="True"
+                         Background="#F0F0F0"
+                         BorderBrush="{StaticResource BorderBrush}"
+                         BorderThickness="1" />
+
+                <Button Grid.Column="2"
+                        Content="📂 Browse..."
+                        Style="{StaticResource PrimaryButton}"
+                        Margin="8,0,0,0"
+                        Click="BrowseTranscode_Click" />
+
+                <Button Grid.Column="3"
+                        Content="♻️ De-Anonymize"
+                        Style="{StaticResource AccentButton}"
+                        Margin="8,0,0,0"
+                        Command="{Binding DeAnonymizeCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                </Grid>
+            </StackPanel>
         </Border>
 
         <!-- ═══ MAIN CONTENT AREA ═══ -->
-        <Grid Grid.Row="2" Visibility="{Binding IsFileLoaded, Converter={StaticResource BoolToVis}}">
+        <Grid Grid.Row="3" Visibility="{Binding IsFileLoaded, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="*" />
@@ -222,22 +297,42 @@
                         </DockPanel>
                     </TabItem>
 
+                    <!-- Tab: Restored Preview -->
+                    <TabItem Header="♻️ Restored Preview">
+                        <DataGrid ItemsSource="{Binding DeAnonymizedPreviewData}"
+                                  AutoGenerateColumns="True"
+                                  AutoGeneratingColumn="PreviewDataGrid_AutoGeneratingColumn"
+                                  IsReadOnly="True"
+                                  CanUserSortColumns="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  AlternatingRowBackground="#F0FFF4"
+                                  FontSize="12"
+                                  BorderThickness="0" />
+                    </TabItem>
+
                 </TabControl>
             </Border>
         </Grid>
 
         <!-- ═══ FOOTER: STATUS + EXPORT ═══ -->
-        <Border Grid.Row="3" Style="{StaticResource CardStyle}" Margin="0,12,0,0">
+        <Border Grid.Row="4" Style="{StaticResource CardStyle}" Margin="0,12,0,0">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
-                            Visibility="{Binding IsAnonymized, Converter={StaticResource BoolToVis}}">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="💾 Export Anonymized Data"
                             Style="{StaticResource SuccessButton}"
                             Margin="0,0,8,0"
+                            Visibility="{Binding IsAnonymized, Converter={StaticResource BoolToVis}}"
                             Click="ExportAnonymized_Click" />
                     <Button Content="📋 Export Transcode Table"
                             Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,8,0"
+                            Visibility="{Binding IsAnonymized, Converter={StaticResource BoolToVis}}"
                             Click="ExportTranscode_Click" />
+                    <Button Content="🔓 Export Restored CSV"
+                            Style="{StaticResource SuccessButton}"
+                            Visibility="{Binding IsDeAnonymized, Converter={StaticResource BoolToVis}}"
+                            Click="ExportRestored_Click" />
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -261,7 +356,7 @@
         </Border>
 
         <!-- ═══ DROP OVERLAY ═══ -->
-        <Border x:Name="DropOverlay" Grid.RowSpan="4"
+        <Border x:Name="DropOverlay" Grid.RowSpan="5"
                 Background="#CC1B5E7B" CornerRadius="12"
                 Visibility="Collapsed" IsHitTestVisible="False">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">

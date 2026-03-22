@@ -15,6 +15,7 @@ public interface IFileWriter
     Task WriteAnonymizedXlsxAsync(string outputPath, AnonymizationResult result, CancellationToken ct = default);
     Task WriteTranscodeTableAsync(string outputPath, List<TranscodeEntry> entries, CancellationToken ct = default);
     Task WriteTranscodeTableXlsxAsync(string outputPath, List<TranscodeEntry> entries, CancellationToken ct = default);
+    Task WriteRestoredCsvAsync(string outputPath, DeAnonymizationResult result, CancellationToken ct = default);
 }
 
 public sealed class FileWriter : IFileWriter
@@ -101,6 +102,25 @@ public sealed class FileWriter : IFileWriter
         ws.Columns().AdjustToContents();
         wb.SaveAs(outputPath);
         return Task.CompletedTask;
+    }
+
+    public async Task WriteRestoredCsvAsync(
+        string outputPath, DeAnonymizationResult result, CancellationToken ct = default)
+    {
+        await using var writer = new StreamWriter(outputPath, false, Encoding.UTF8);
+        await using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+
+        foreach (var header in result.Headers)
+            csv.WriteField(header);
+        await csv.NextRecordAsync();
+
+        foreach (var row in result.RestoredRows)
+        {
+            ct.ThrowIfCancellationRequested();
+            foreach (var header in result.Headers)
+                csv.WriteField(row.GetValueOrDefault(header, string.Empty));
+            await csv.NextRecordAsync();
+        }
     }
 
     public async Task WriteTranscodeTableAsync(

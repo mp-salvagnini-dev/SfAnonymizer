@@ -2,6 +2,7 @@ using System.Globalization;
 using ClosedXML.Excel;
 using CsvHelper;
 using CsvHelper.Configuration;
+using SfAnonymizer.Core.Models;
 
 namespace SfAnonymizer.Core.Services;
 
@@ -11,6 +12,9 @@ namespace SfAnonymizer.Core.Services;
 public interface IFileParser
 {
     Task<(List<string> Headers, List<Dictionary<string, string>> Rows)> ParseAsync(
+        string filePath, CancellationToken ct = default);
+
+    Task<List<TranscodeEntry>> ParseTranscodeTableAsync(
         string filePath, CancellationToken ct = default);
 }
 
@@ -61,6 +65,38 @@ public sealed class FileParser : IFileParser
         }
 
         return (headers, rows);
+    }
+
+    public async Task<List<TranscodeEntry>> ParseTranscodeTableAsync(
+        string filePath, CancellationToken ct = default)
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = true,
+            MissingFieldFound = null,
+            BadDataFound = null,
+            TrimOptions = TrimOptions.Trim,
+        };
+
+        using var reader = new StreamReader(filePath);
+        using var csv = new CsvReader(reader, config);
+
+        await csv.ReadAsync();
+        csv.ReadHeader();
+
+        var entries = new List<TranscodeEntry>();
+        while (await csv.ReadAsync())
+        {
+            ct.ThrowIfCancellationRequested();
+            entries.Add(new TranscodeEntry(
+                ColumnName:      csv.GetField<string>("Column")          ?? string.Empty,
+                OriginalValue:   csv.GetField<string>("Original Value")  ?? string.Empty,
+                AnonymizedValue: csv.GetField<string>("Anonymized Value") ?? string.Empty,
+                CategoryDisplay: csv.GetField<string>("Category")        ?? string.Empty,
+                RowIndex:        csv.GetField<int>("Row")));
+        }
+
+        return entries;
     }
 
     private static (List<string> Headers, List<Dictionary<string, string>> Rows) ParseExcel(string filePath)

@@ -15,6 +15,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly IFileParser _parser;
     private readonly IAnonymizationEngine _engine;
+    private readonly IDeAnonymizationEngine _deAnonymizer;
     private readonly IFileWriter _writer;
     private readonly ISensitiveColumnDetector _detector;
 
@@ -22,6 +23,7 @@ public partial class MainViewModel : ObservableObject
     private List<string> _headers = [];
     private List<Dictionary<string, string>> _rows = [];
     private AnonymizationResult? _lastResult;
+    private DeAnonymizationResult? _lastDeAnonymizationResult;
 
     /// <summary>
     /// All available categories (built-in + user-defined). Bound to each column's ComboBox.
@@ -31,11 +33,13 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         IFileParser parser,
         IAnonymizationEngine engine,
+        IDeAnonymizationEngine deAnonymizer,
         IFileWriter writer,
         ISensitiveColumnDetector detector)
     {
         _parser = parser;
         _engine = engine;
+        _deAnonymizer = deAnonymizer;
         _writer = writer;
         _detector = detector;
 
@@ -100,6 +104,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _previewTabHeader = "📄 Original Data";
 
+    // ── De-Anonymization state ──
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DeAnonymizeCommand))]
+    private string _transcodeFilePath = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDeAnonymized;
+
+    [ObservableProperty]
+    private DataView? _deAnonymizedPreviewData;
+
     // ── Commands ──
 
     public event EventHandler? ManageCategoriesRequested;
@@ -119,13 +135,17 @@ public partial class MainViewModel : ObservableObject
         _headers = [];
         _rows = [];
         _lastResult = null;
+        _lastDeAnonymizationResult = null;
         DetectedColumns.Clear();
         TranscodeEntries.Clear();
         PreviewData = null;
+        DeAnonymizedPreviewData = null;
         TotalRows = 0;
         TotalReplacements = 0;
         IsFileLoaded = false;
         IsAnonymized = false;
+        IsDeAnonymized = false;
+        TranscodeFilePath = string.Empty;
         StatusMessage = "Ready. Drop or select a CSV/Excel file to begin.";
     }
 
@@ -350,6 +370,77 @@ public partial class MainViewModel : ObservableObject
             await _writer.WriteTranscodeTableXlsxAsync(outputPath, _lastResult.TranscodeTable, ct);
 
             StatusMessage = $"Transcode table saved to: {outputPath}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export error: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    // ── De-Anonymization ──
+
+    private bool CanDeAnonymize() =>
+        IsFileLoaded && !string.IsNullOrWhiteSpace(TranscodeFilePath) && File.Exists(TranscodeFilePath);
+
+    [RelayCommand(CanExecute = nameof(CanDeAnonymize))]
+    private async Task DeAnonymizeAsync(CancellationToken ct)
+    {
+        try
+        {
+            IsBusy = true;
+            StatusMessage = "Loading transcode table...";
+
+            var transcodeEntries = await _parser.ParseTranscodeTableAsync(TranscodeFilePath, ct);
+
+            StatusMessage = "Restoring original values...";
+            _lastDeAnonymizationResult = _deAnonymizer.DeAnonymize(_headers, _rows, transcodeEntries);
+
+            // Build preview DataTable (first 100 rows)
+            var table = new DataTable();
+            foreach (var header in _lastDeAnonymizationResult.Headers)
+                table.Columns.Add(header, typeof(string));
+            foreach (var row in _lastDeAnonymizationResult.RestoredRows.Take(100))
+            {
+                var dr = table.NewRow();
+                foreach (var header in _lastDeAnonymizationResult.Headers)
+                    dr[header] = row.GetValueOrDefault(header, string.Empty);
+                table.Rows.Add(dr);
+            }
+
+            DeAnonymizedPreviewData = table.DefaultView;
+            IsDeAnonymized = true;
+
+            StatusMessage = $"Restored! {_lastDeAnonymizationResult.TotalRestorations} values across " +
+                            $"{_lastDeAnonymizationResult.AffectedRows} rows, " +
+                            $"{_lastDeAnonymizationResult.AffectedColumns} columns.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"De-anonymization error: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportRestoredAsync(string outputPath, CancellationToken ct)
+    {
+        if (_lastDeAnonymizationResult is null) return;
+
+        try
+        {
+            IsBusy = true;
+            StatusMessage = "Exporting restored file...";
+
+            await _writer.WriteRestoredCsvAsync(outputPath, _lastDeAnonymizationResult, ct);
+
+            StatusMessage = $"Restored file saved to: {outputPath}";
         }
         catch (Exception ex)
         {

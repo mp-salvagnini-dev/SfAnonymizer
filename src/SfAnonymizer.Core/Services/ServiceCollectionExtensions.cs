@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISensitiveColumnDetector, SalesforceColumnDetector>();
         services.AddTransient<TokenGenerator>();
         services.AddTransient<IAnonymizationEngine, AnonymizationEngine>();
+        services.AddTransient<IDeAnonymizationEngine, DeAnonymizationEngine>();
         services.AddSingleton<IFileParser, FileParser>();
         services.AddSingleton<IFileWriter, FileWriter>();
         return services;

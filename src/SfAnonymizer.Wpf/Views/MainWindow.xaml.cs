@@ -113,6 +113,33 @@ public partial class MainWindow : Window
             await _vm.ExportAnonymizedXlsxCommand.ExecuteAsync(dialog.FileName);
     }
 
+    private void BrowseTranscode_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select Transcode Table CSV",
+            Filter = "CSV Files (*.csv)|*.csv",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() == true)
+            _vm.TranscodeFilePath = dialog.FileName;
+    }
+
+    private async void ExportRestored_Click(object sender, RoutedEventArgs e)
+    {
+        var inputName = Path.GetFileNameWithoutExtension(_vm.InputFilePath);
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save Restored File",
+            Filter = "CSV Files (*.csv)|*.csv",
+            FileName = $"{inputName}_restored.csv"
+        };
+
+        if (dialog.ShowDialog() == true)
+            await _vm.ExportRestoredCommand.ExecuteAsync(dialog.FileName);
+    }
+
     // ── Drag & Drop ──
 
     private void OnDragOver(object sender, DragEventArgs e)
