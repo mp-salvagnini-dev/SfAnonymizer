@@ -1,3 +1,0 @@
-C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\bin\Release\net8.0-windows\win-x64\publish\ITSMTicketAnonymizer.pdb
-C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\bin\Release\net8.0-windows\win-x64\publish\SfAnonymizer.Core.pdb
-C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\bin\Release\net8.0-windows\win-x64\publish\ITSMTicketAnonymizer.exe
