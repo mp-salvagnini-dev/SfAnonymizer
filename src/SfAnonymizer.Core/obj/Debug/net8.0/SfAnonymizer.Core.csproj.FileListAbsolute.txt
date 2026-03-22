@@ -10,3 +10,4 @@ C:\Sources\SfAnonymizer\src\SfAnonymizer.Core\obj\Debug\net8.0\SfAnonymizer.Core
 C:\Sources\SfAnonymizer\src\SfAnonymizer.Core\obj\Debug\net8.0\refint\SfAnonymizer.Core.dll
 C:\Sources\SfAnonymizer\src\SfAnonymizer.Core\obj\Debug\net8.0\SfAnonymizer.Core.pdb
 C:\Sources\SfAnonymizer\src\SfAnonymizer.Core\obj\Debug\net8.0\ref\SfAnonymizer.Core.dll
+C:\Sources\SfAnonymizer\src\SfAnonymizer.Core\obj\Debug\net8.0\SfAnonymizer.Core.sourcelink.json

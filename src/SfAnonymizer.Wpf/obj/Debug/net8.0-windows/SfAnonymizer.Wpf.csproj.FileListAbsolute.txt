@@ -34,3 +34,4 @@ C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\obj\Debug\net8.0-windows\ITSMTicket
 C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\obj\Debug\net8.0-windows\refint\ITSMTicketAnonymizer.dll
 C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\obj\Debug\net8.0-windows\ITSMTicketAnonymizer.pdb
 C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\obj\Debug\net8.0-windows\ref\ITSMTicketAnonymizer.dll
+C:\Sources\SfAnonymizer\src\SfAnonymizer.Wpf\obj\Debug\net8.0-windows\SfAnonymizer.Wpf.sourcelink.json
