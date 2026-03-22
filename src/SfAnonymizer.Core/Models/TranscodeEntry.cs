@@ -7,5 +7,5 @@ public sealed record TranscodeEntry(
     string ColumnName,
     string OriginalValue,
     string AnonymizedValue,
-    SensitiveDataCategory Category,
+    string CategoryDisplay,
     int RowIndex);

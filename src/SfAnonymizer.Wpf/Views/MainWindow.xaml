@@ -96,8 +96,16 @@
             <!-- ─── LEFT: COLUMN SELECTOR ─── -->
             <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,12,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}"
-                               Text="🔍 Sensitive Columns" />
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                        <TextBlock Style="{StaticResource SectionHeader}"
+                                   Text="🔍 Sensitive Columns"
+                                   VerticalAlignment="Center" />
+                        <Button HorizontalAlignment="Right"
+                                Content="🗂 Categories"
+                                FontSize="11" Padding="8,3"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding ManageCategoriesCommand}" />
+                    </Grid>
                     <TextBlock DockPanel.Dock="Top"
                                Text="Check columns to anonymize. Categories are auto-detected."
                                FontSize="11" Foreground="{StaticResource SubtleTextBrush}"
@@ -138,8 +146,8 @@
 
                                             <ComboBox Grid.Column="2"
                                                       SelectedItem="{Binding Category}"
-                                                      ItemsSource="{Binding Source={x:Static vm:CategoryHelper.All}}"
-                                                      FontSize="10" Width="85"
+                                                      ItemsSource="{Binding DataContext.AvailableCategories, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      FontSize="10" Width="100"
                                                       Padding="4,2"
                                                       VerticalAlignment="Center" />
                                         </Grid>
@@ -156,7 +164,7 @@
                 <TabControl Background="Transparent" BorderThickness="0">
 
                     <!-- Tab: Preview -->
-                    <TabItem Header="📄 Anonymized Preview">
+                    <TabItem Header="{Binding PreviewTabHeader}">
                         <DataGrid ItemsSource="{Binding PreviewData}"
                                   AutoGenerateColumns="True"
                                   AutoGeneratingColumn="PreviewDataGrid_AutoGeneratingColumn"
@@ -192,7 +200,7 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Row" Binding="{Binding RowIndex}" Width="60" />
                                     <DataGridTextColumn Header="Column" Binding="{Binding ColumnName}" Width="140" />
-                                    <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="100" />
+                                    <DataGridTextColumn Header="Category" Binding="{Binding CategoryDisplay}" Width="100" />
                                     <DataGridTextColumn Header="Original" Binding="{Binding OriginalValue}" Width="*">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
@@ -223,7 +231,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                             Visibility="{Binding IsAnonymized, Converter={StaticResource BoolToVis}}">
-                    <Button Content="💾 Export Anonymized CSV"
+                    <Button Content="💾 Export Anonymized Data"
                             Style="{StaticResource SuccessButton}"
                             Margin="0,0,8,0"
                             Click="ExportAnonymized_Click" />

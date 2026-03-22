@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using Microsoft.Win32;
 using SfAnonymizer.Wpf.ViewModels;
 
@@ -16,6 +17,17 @@ public partial class MainWindow : Window
         InitializeComponent();
         _vm = vm;
         DataContext = _vm;
+        _vm.ManageCategoriesRequested += (_, _) =>
+        {
+            var dialog = new ManageCategoriesDialog(_vm.AvailableCategories) { Owner = this };
+            dialog.ShowDialog();
+        };
+
+        _vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(_vm.IsBusy))
+                Mouse.OverrideCursor = _vm.IsBusy ? Cursors.Wait : null;
+        };
     }
 
     // ── DataGrid column binding fix for dotted column names (e.g. "Account.Name") ──
@@ -55,13 +67,16 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             Title = "Save Anonymized File",
-            Filter = "CSV Files (*.csv)|*.csv",
+            Filter = "CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx",
             FileName = $"{inputName}_anonymized.csv"
         };
 
         if (dialog.ShowDialog() == true)
         {
-            await _vm.ExportAnonymizedCommand.ExecuteAsync(dialog.FileName);
+            if (Path.GetExtension(dialog.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+                await _vm.ExportAnonymizedXlsxCommand.ExecuteAsync(dialog.FileName);
+            else
+                await _vm.ExportAnonymizedCommand.ExecuteAsync(dialog.FileName);
         }
     }
 
@@ -71,14 +86,31 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             Title = "Save Transcode Table",
-            Filter = "CSV Files (*.csv)|*.csv",
+            Filter = "CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx",
             FileName = $"{inputName}_transcode.csv"
         };
 
         if (dialog.ShowDialog() == true)
         {
-            await _vm.ExportTranscodeTableCommand.ExecuteAsync(dialog.FileName);
+            if (Path.GetExtension(dialog.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+                await _vm.ExportTranscodeTableXlsxCommand.ExecuteAsync(dialog.FileName);
+            else
+                await _vm.ExportTranscodeTableCommand.ExecuteAsync(dialog.FileName);
         }
+    }
+
+    private async void ExportAnonymizedXlsx_Click(object sender, RoutedEventArgs e)
+    {
+        var inputName = Path.GetFileNameWithoutExtension(_vm.InputFilePath);
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save Anonymized File as Excel",
+            Filter = "Excel Files (*.xlsx)|*.xlsx",
+            FileName = $"{inputName}_anonymized.xlsx"
+        };
+
+        if (dialog.ShowDialog() == true)
+            await _vm.ExportAnonymizedXlsxCommand.ExecuteAsync(dialog.FileName);
     }
 
     // ── Drag & Drop ──

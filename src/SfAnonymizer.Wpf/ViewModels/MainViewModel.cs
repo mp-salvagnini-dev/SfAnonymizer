@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Data;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using SfAnonymizer.Core.Detectors;
 using SfAnonymizer.Core.Models;
 using SfAnonymizer.Core.Services;
+using SfAnonymizer.Wpf.Services;
 
 namespace SfAnonymizer.Wpf.ViewModels;
 
@@ -21,6 +23,11 @@ public partial class MainViewModel : ObservableObject
     private List<Dictionary<string, string>> _rows = [];
     private AnonymizationResult? _lastResult;
 
+    /// <summary>
+    /// All available categories (built-in + user-defined). Bound to each column's ComboBox.
+    /// </summary>
+    public ObservableCollection<CategoryOption> AvailableCategories { get; }
+
     public MainViewModel(
         IFileParser parser,
         IAnonymizationEngine engine,
@@ -31,6 +38,21 @@ public partial class MainViewModel : ObservableObject
         _engine = engine;
         _writer = writer;
         _detector = detector;
+
+        // Seed with built-ins, then append any saved custom categories
+        AvailableCategories = new(CategoryHelper.BuiltIns);
+        foreach (var def in CategoryStorage.Load())
+            AvailableCategories.Add(new CategoryOption(def));
+
+        // Auto-save whenever the list changes
+        AvailableCategories.CollectionChanged += OnAvailableCategoriesChanged;
+    }
+
+    private void OnAvailableCategoriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        CategoryStorage.Save(AvailableCategories
+            .Where(o => o.IsCustom)
+            .Select(o => o.Custom!));
     }
 
     [ObservableProperty]
@@ -75,7 +97,15 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private DataView? _previewData;
 
+    [ObservableProperty]
+    private string _previewTabHeader = "📄 Original Data";
+
     // ── Commands ──
+
+    public event EventHandler? ManageCategoriesRequested;
+
+    [RelayCommand]
+    private void ManageCategories() => ManageCategoriesRequested?.Invoke(this, EventArgs.Empty);
 
     private bool CanParseFile() =>
         !string.IsNullOrWhiteSpace(InputFilePath) && File.Exists(InputFilePath);
@@ -119,18 +149,24 @@ public partial class MainViewModel : ObservableObject
                 var match = classifications.FirstOrDefault(c =>
                     string.Equals(c.ColumnName, header, StringComparison.OrdinalIgnoreCase));
 
+                var defaultOption = match is not null
+                    ? AvailableCategories.FirstOrDefault(o => o.BuiltIn == match.Category)
+                      ?? AvailableCategories.First()
+                    : AvailableCategories.First();
+
                 DetectedColumns.Add(new ColumnClassificationViewModel
                 {
                     ColumnName = header,
                     IsSelected = match is not null,
-                    Category = match?.Category ?? SensitiveDataCategory.Custom,
+                    Category = defaultOption,
                 });
             }
 
             IsFileLoaded = true;
             IsAnonymized = false;
             TranscodeEntries.Clear();
-            PreviewData = null;
+            PreviewData = BuildOriginalPreviewTable().DefaultView;
+            PreviewTabHeader = "📄 Original Data";
 
             StatusMessage = $"Loaded {_rows.Count} rows, {_headers.Count} columns. " +
                            $"{classifications.Count} sensitive column(s) auto-detected.";
@@ -156,7 +192,11 @@ public partial class MainViewModel : ObservableObject
             // Build classification list from user selection
             var selectedClassifications = DetectedColumns
                 .Where(c => c.IsSelected)
-                .Select(c => new ColumnClassification(c.ColumnName, c.Category, IsAutoDetected: false))
+                .Select(c => new ColumnClassification(
+                    c.ColumnName,
+                    c.Category.BuiltIn ?? SensitiveDataCategory.Custom,
+                    IsAutoDetected: false,
+                    c.Category.Custom))
                 .ToList();
 
             _lastResult = _engine.Anonymize(_headers, _rows, selectedClassifications);
@@ -173,6 +213,7 @@ public partial class MainViewModel : ObservableObject
 
             TotalReplacements = _lastResult.TotalReplacements;
             IsAnonymized = true;
+            PreviewTabHeader = "📄 Anonymized Preview";
 
             StatusMessage = $"Done! {_lastResult.TotalReplacements} replacements across " +
                            $"{_lastResult.AffectedRows} rows, {_lastResult.AffectedColumns} columns.";
@@ -185,6 +226,21 @@ public partial class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    private DataTable BuildOriginalPreviewTable()
+    {
+        var table = new DataTable();
+        foreach (var header in _headers)
+            table.Columns.Add(header, typeof(string));
+        foreach (var row in _rows.Take(100))
+        {
+            var dr = table.NewRow();
+            foreach (var header in _headers)
+                dr[header] = row.GetValueOrDefault(header, string.Empty);
+            table.Rows.Add(dr);
+        }
+        return table;
     }
 
     private static DataTable BuildPreviewTable(AnonymizationResult result)
@@ -234,6 +290,30 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ExportAnonymizedXlsxAsync(string outputPath, CancellationToken ct)
+    {
+        if (_lastResult is null) return;
+
+        try
+        {
+            IsBusy = true;
+            StatusMessage = "Exporting anonymized file...";
+
+            await _writer.WriteAnonymizedXlsxAsync(outputPath, _lastResult, ct);
+
+            StatusMessage = $"Anonymized file saved to: {outputPath}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export error: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task ExportTranscodeTableAsync(string outputPath, CancellationToken ct)
     {
         if (_lastResult is null) return;
@@ -244,6 +324,30 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Exporting transcode table...";
 
             await _writer.WriteTranscodeTableAsync(outputPath, _lastResult.TranscodeTable, ct);
+
+            StatusMessage = $"Transcode table saved to: {outputPath}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export error: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportTranscodeTableXlsxAsync(string outputPath, CancellationToken ct)
+    {
+        if (_lastResult is null) return;
+
+        try
+        {
+            IsBusy = true;
+            StatusMessage = "Exporting transcode table...";
+
+            await _writer.WriteTranscodeTableXlsxAsync(outputPath, _lastResult.TranscodeTable, ct);
 
             StatusMessage = $"Transcode table saved to: {outputPath}";
         }
@@ -270,5 +374,5 @@ public partial class ColumnClassificationViewModel : ObservableObject
     private bool _isSelected;
 
     [ObservableProperty]
-    private SensitiveDataCategory _category;
+    private CategoryOption _category = null!;
 }

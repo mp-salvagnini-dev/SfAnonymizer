@@ -15,12 +15,21 @@ public sealed class TokenGenerator
 
     /// <summary>
     /// Gets an anonymous token for the given original value.
-    /// Deterministic within a session: same input → same token.
+    /// If a custom category is provided its prefix settings take priority.
     /// </summary>
-    public string GetToken(string originalValue, SensitiveDataCategory category)
+    public string GetToken(string originalValue, SensitiveDataCategory category, CustomCategoryDefinition? custom = null)
     {
         if (string.IsNullOrWhiteSpace(originalValue))
             return originalValue;
+
+        var hash = ComputeHash(originalValue);
+
+        if (custom is not null)
+        {
+            return custom.UsePrefix && !string.IsNullOrWhiteSpace(custom.Prefix)
+                ? $"{custom.Prefix}-{hash}"
+                : hash;
+        }
 
         var prefix = category switch
         {
@@ -32,12 +41,11 @@ public sealed class TokenGenerator
             _                                     => "ANON"
         };
 
-        var hash = ComputeHash(originalValue);
         return $"{prefix}-{hash}";
     }
 
     /// <summary>
-    /// Resets the session key. All subsequent tokens will be different from previous runs.
+    /// Resets the session key. All subsequent tokens will differ from previous runs.
     /// </summary>
     public void Reset() => _key = RandomNumberGenerator.GetBytes(32);
 

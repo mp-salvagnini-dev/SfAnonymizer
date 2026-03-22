@@ -48,13 +48,15 @@ public sealed class AnonymizationEngine(
                 if (classificationMap.TryGetValue(header, out var classification)
                     && !string.IsNullOrWhiteSpace(value))
                 {
-                    var token = tokenGenerator.GetToken(value, classification.Category);
+                    var token = tokenGenerator.GetToken(value, classification.Category, classification.CustomCategory);
                     newRow[header] = token;
 
                     if (!string.Equals(value, token, StringComparison.Ordinal))
                     {
+                        var categoryDisplay = classification.CustomCategory?.Name
+                            ?? classification.Category.ToString();
                         transcodeEntries.Add(new TranscodeEntry(
-                            header, value, token, classification.Category, rowIdx + 1));
+                            header, value, token, categoryDisplay, rowIdx + 1));
                     }
                 }
                 else

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using ClosedXML.Excel;
 using CsvHelper;
 using SfAnonymizer.Core.Models;
 
@@ -11,7 +12,9 @@ namespace SfAnonymizer.Core.Services;
 public interface IFileWriter
 {
     Task WriteAnonymizedCsvAsync(string outputPath, AnonymizationResult result, CancellationToken ct = default);
+    Task WriteAnonymizedXlsxAsync(string outputPath, AnonymizationResult result, CancellationToken ct = default);
     Task WriteTranscodeTableAsync(string outputPath, List<TranscodeEntry> entries, CancellationToken ct = default);
+    Task WriteTranscodeTableXlsxAsync(string outputPath, List<TranscodeEntry> entries, CancellationToken ct = default);
 }
 
 public sealed class FileWriter : IFileWriter
@@ -41,6 +44,65 @@ public sealed class FileWriter : IFileWriter
         }
     }
 
+    public Task WriteAnonymizedXlsxAsync(
+        string outputPath, AnonymizationResult result, CancellationToken ct = default)
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("Anonymized");
+
+        // Header row (bold)
+        for (var i = 0; i < result.Headers.Count; i++)
+        {
+            var cell = ws.Cell(1, i + 1);
+            cell.Value = result.Headers[i];
+            cell.Style.Font.Bold = true;
+        }
+
+        // Data rows
+        for (var rowIdx = 0; rowIdx < result.Rows.Count; rowIdx++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var row = result.Rows[rowIdx];
+            for (var colIdx = 0; colIdx < result.Headers.Count; colIdx++)
+                ws.Cell(rowIdx + 2, colIdx + 1).Value = row.GetValueOrDefault(result.Headers[colIdx], string.Empty);
+        }
+
+        ws.Columns().AdjustToContents();
+        wb.SaveAs(outputPath);
+        return Task.CompletedTask;
+    }
+
+    public Task WriteTranscodeTableXlsxAsync(
+        string outputPath, List<TranscodeEntry> entries, CancellationToken ct = default)
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("Transcode");
+
+        string[] headers = ["Row", "Column", "Category", "Original Value", "Anonymized Value"];
+        for (var i = 0; i < headers.Length; i++)
+        {
+            var cell = ws.Cell(1, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+        }
+
+        var sorted = entries.OrderBy(e => e.RowIndex).ThenBy(e => e.ColumnName).ToList();
+        for (var i = 0; i < sorted.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var e = sorted[i];
+            ws.Cell(i + 2, 1).Value = e.RowIndex;
+            ws.Cell(i + 2, 2).Value = e.ColumnName;
+            ws.Cell(i + 2, 3).Value = e.CategoryDisplay;
+            ws.Cell(i + 2, 4).Value = e.OriginalValue;
+            ws.Cell(i + 2, 5).Value = e.AnonymizedValue;
+        }
+
+        ws.Columns().AdjustToContents();
+        wb.SaveAs(outputPath);
+        return Task.CompletedTask;
+    }
+
     public async Task WriteTranscodeTableAsync(
         string outputPath, List<TranscodeEntry> entries, CancellationToken ct = default)
     {
@@ -60,7 +122,7 @@ public sealed class FileWriter : IFileWriter
             ct.ThrowIfCancellationRequested();
             csv.WriteField(entry.RowIndex);
             csv.WriteField(entry.ColumnName);
-            csv.WriteField(entry.Category.ToString());
+            csv.WriteField(entry.CategoryDisplay);
             csv.WriteField(entry.OriginalValue);
             csv.WriteField(entry.AnonymizedValue);
             await csv.NextRecordAsync();

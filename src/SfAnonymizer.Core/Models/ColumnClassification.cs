@@ -6,4 +6,5 @@ namespace SfAnonymizer.Core.Models;
 public sealed record ColumnClassification(
     string ColumnName,
     SensitiveDataCategory Category,
-    bool IsAutoDetected);
+    bool IsAutoDetected,
+    CustomCategoryDefinition? CustomCategory = null);
