@@ -23,14 +23,18 @@ public sealed class DeAnonymizationEngine : IDeAnonymizationEngine
         List<TranscodeEntry> transcodeEntries)
     {
         // Build per-column reverse dictionaries: AnonymizedValue → OriginalValue
+        // Use last-wins to handle duplicate anonymized values in the transcode table
         var reverseMapsByColumn = transcodeEntries
             .GroupBy(e => e.ColumnName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 g => g.Key,
-                g => g.ToDictionary(
-                    e => e.AnonymizedValue,
-                    e => e.OriginalValue,
-                    StringComparer.OrdinalIgnoreCase),
+                g =>
+                {
+                    var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var e in g)
+                        map[e.AnonymizedValue] = e.OriginalValue;
+                    return map;
+                },
                 StringComparer.OrdinalIgnoreCase);
 
         var restoredRows = new List<Dictionary<string, string>>();

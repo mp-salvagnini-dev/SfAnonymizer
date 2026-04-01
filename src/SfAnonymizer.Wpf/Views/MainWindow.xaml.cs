@@ -117,8 +117,8 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Select Transcode Table CSV",
-            Filter = "CSV Files (*.csv)|*.csv",
+            Title = "Select Transcode Table",
+            Filter = "Supported Files (*.csv;*.xlsx)|*.csv;*.xlsx|CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx",
             CheckFileExists = true
         };
 

@@ -67,8 +67,20 @@ public sealed class FileParser : IFileParser
         return (headers, rows);
     }
 
-    public async Task<List<TranscodeEntry>> ParseTranscodeTableAsync(
+    public Task<List<TranscodeEntry>> ParseTranscodeTableAsync(
         string filePath, CancellationToken ct = default)
+    {
+        var ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return ext switch
+        {
+            ".csv"           => ParseTranscodeCsvAsync(filePath, ct),
+            ".xlsx" or ".xls" => Task.FromResult(ParseTranscodeExcel(filePath)),
+            _ => throw new NotSupportedException($"File format '{ext}' is not supported. Use .csv or .xlsx.")
+        };
+    }
+
+    private static async Task<List<TranscodeEntry>> ParseTranscodeCsvAsync(
+        string filePath, CancellationToken ct)
     {
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -89,11 +101,47 @@ public sealed class FileParser : IFileParser
         {
             ct.ThrowIfCancellationRequested();
             entries.Add(new TranscodeEntry(
-                ColumnName:      csv.GetField<string>("Column")          ?? string.Empty,
-                OriginalValue:   csv.GetField<string>("Original Value")  ?? string.Empty,
+                ColumnName:      csv.GetField<string>("Column")           ?? string.Empty,
+                OriginalValue:   csv.GetField<string>("Original Value")   ?? string.Empty,
                 AnonymizedValue: csv.GetField<string>("Anonymized Value") ?? string.Empty,
-                CategoryDisplay: csv.GetField<string>("Category")        ?? string.Empty,
+                CategoryDisplay: csv.GetField<string>("Category")         ?? string.Empty,
                 RowIndex:        csv.GetField<int>("Row")));
+        }
+
+        return entries;
+    }
+
+    private static List<TranscodeEntry> ParseTranscodeExcel(string filePath)
+    {
+        using var workbook = new XLWorkbook(filePath);
+        var sheet = workbook.Worksheets.First();
+        var firstRow = sheet.FirstRowUsed() ?? throw new InvalidOperationException("Excel sheet is empty.");
+
+        var headers = firstRow.CellsUsed()
+            .Select(c => c.GetString().Trim())
+            .ToList();
+
+        int ColIdx(string name)
+        {
+            var idx = headers.FindIndex(h => string.Equals(h, name, StringComparison.OrdinalIgnoreCase));
+            return idx >= 0 ? idx + 1 : throw new InvalidOperationException($"Column '{name}' not found in transcode table.");
+        }
+
+        var rowCol      = ColIdx("Row");
+        var columnCol   = ColIdx("Column");
+        var categoryCol = ColIdx("Category");
+        var origCol     = ColIdx("Original Value");
+        var anonCol     = ColIdx("Anonymized Value");
+
+        var entries = new List<TranscodeEntry>();
+        foreach (var row in sheet.RowsUsed().Skip(1))
+        {
+            entries.Add(new TranscodeEntry(
+                ColumnName:      row.Cell(columnCol).GetString().Trim(),
+                OriginalValue:   row.Cell(origCol).GetString().Trim(),
+                AnonymizedValue: row.Cell(anonCol).GetString().Trim(),
+                CategoryDisplay: row.Cell(categoryCol).GetString().Trim(),
+                RowIndex:        int.TryParse(row.Cell(rowCol).GetString(), out var r) ? r : 0));
         }
 
         return entries;
