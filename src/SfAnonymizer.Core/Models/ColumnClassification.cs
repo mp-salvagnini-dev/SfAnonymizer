@@ -7,4 +7,5 @@ public sealed record ColumnClassification(
     string ColumnName,
     SensitiveDataCategory Category,
     bool IsAutoDetected,
-    CustomCategoryDefinition? CustomCategory = null);
+    CustomCategoryDefinition? CustomCategory = null,
+    bool ScanContent = false);

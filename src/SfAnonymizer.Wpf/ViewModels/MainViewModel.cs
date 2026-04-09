@@ -179,6 +179,7 @@ public partial class MainViewModel : ObservableObject
                     ColumnName = header,
                     IsSelected = match is not null,
                     Category = defaultOption,
+                    ScanContent = match?.ScanContent ?? false,
                 });
             }
 
@@ -202,7 +203,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Anonymize()
+    private async Task AnonymizeAsync()
     {
         try
         {
@@ -216,10 +217,12 @@ public partial class MainViewModel : ObservableObject
                     c.ColumnName,
                     c.Category.BuiltIn ?? SensitiveDataCategory.Custom,
                     IsAutoDetected: false,
-                    c.Category.Custom))
+                    c.Category.Custom,
+                    ScanContent: c.ScanContent))
                 .ToList();
 
-            _lastResult = _engine.Anonymize(_headers, _rows, selectedClassifications);
+            // Run on background thread so UI stays responsive
+            _lastResult = await Task.Run(() => _engine.Anonymize(_headers, _rows, selectedClassifications));
 
             // Update transcode table
             TranscodeEntries.Clear();
@@ -466,4 +469,7 @@ public partial class ColumnClassificationViewModel : ObservableObject
 
     [ObservableProperty]
     private CategoryOption _category = null!;
+
+    /// <summary>True for description-like columns: only matched patterns are replaced inline.</summary>
+    public bool ScanContent { get; init; }
 }

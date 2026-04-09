@@ -20,7 +20,8 @@ public interface IAnonymizationEngine
 
 public sealed class AnonymizationEngine(
     ISensitiveColumnDetector detector,
-    TokenGenerator tokenGenerator) : IAnonymizationEngine
+    TokenGenerator tokenGenerator,
+    IContentScanner contentScanner) : IAnonymizationEngine
 {
     public AnonymizationResult Anonymize(
         List<string> headers,
@@ -48,15 +49,33 @@ public sealed class AnonymizationEngine(
                 if (classificationMap.TryGetValue(header, out var classification)
                     && !string.IsNullOrWhiteSpace(value))
                 {
-                    var token = tokenGenerator.GetToken(value, classification.Category, classification.CustomCategory);
-                    newRow[header] = token;
-
-                    if (!string.Equals(value, token, StringComparison.Ordinal))
+                    if (classification.ScanContent)
                     {
-                        var categoryDisplay = classification.CustomCategory?.Name
-                            ?? classification.Category.ToString();
-                        transcodeEntries.Add(new TranscodeEntry(
-                            header, value, token, categoryDisplay, rowIdx + 1));
+                        // Inline replacement: only replace matched sensitive patterns within the text
+                        var replaced = contentScanner.ReplaceMatches(
+                            value,
+                            (match, category) => tokenGenerator.GetToken(match, category),
+                            (original, token, category) =>
+                            {
+                                if (!string.Equals(original, token, StringComparison.Ordinal))
+                                    transcodeEntries.Add(new TranscodeEntry(
+                                        header, original, token, category.ToString(), rowIdx + 1));
+                            });
+                        newRow[header] = replaced;
+                    }
+                    else
+                    {
+                        // Whole-cell replacement
+                        var token = tokenGenerator.GetToken(value, classification.Category, classification.CustomCategory);
+                        newRow[header] = token;
+
+                        if (!string.Equals(value, token, StringComparison.Ordinal))
+                        {
+                            var categoryDisplay = classification.CustomCategory?.Name
+                                ?? classification.Category.ToString();
+                            transcodeEntries.Add(new TranscodeEntry(
+                                header, value, token, categoryDisplay, rowIdx + 1));
+                        }
                     }
                 }
                 else

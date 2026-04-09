@@ -42,6 +42,17 @@ public sealed partial class SalesforceColumnDetector : ISensitiveColumnDetector
 
         foreach (var header in headers)
         {
+            // Description-like columns: scan content inline for phone, email, serial
+            if (DescriptionRegex().IsMatch(header))
+            {
+                results.Add(new ColumnClassification(
+                    header,
+                    SensitiveDataCategory.Custom,
+                    IsAutoDetected: true,
+                    ScanContent: true));
+                continue;
+            }
+
             var nameMatch = ColumnNamePatterns
                 .FirstOrDefault(p => p.Pattern.IsMatch(header));
 
@@ -73,4 +84,9 @@ public sealed partial class SalesforceColumnDetector : ISensitiveColumnDetector
     // matches: Machine Type, Machine Family, Product Family, Model, Asset Type
     [GeneratedRegex(@"(?i)(machine[._\s]?(type|family|model)|product[._\s]?family|asset[._\s]?type|^model$|^family$)")]
     private static partial Regex MachineTypeRegex();
+
+    // Description-like columns: content will be scanned inline for phone, email, serial
+    // matches: Description, Notes, Comment(s), Body, Details, Summary, Text
+    [GeneratedRegex(@"(?i)(description|notes?|comments?|body|details?|summary|text)")]
+    private static partial Regex DescriptionRegex();
 }

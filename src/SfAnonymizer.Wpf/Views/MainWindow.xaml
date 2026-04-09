@@ -164,12 +164,13 @@
         <!-- ═══ MAIN CONTENT AREA ═══ -->
         <Grid Grid.Row="3" Visibility="{Binding IsFileLoaded, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="280" MinWidth="200" MaxWidth="500" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- ─── LEFT: COLUMN SELECTOR ─── -->
-            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,12,0">
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,4,0">
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
                         <TextBlock Style="{StaticResource SectionHeader}"
@@ -234,8 +235,13 @@
                 </DockPanel>
             </Border>
 
+            <!-- ─── SPLITTER ─── -->
+            <GridSplitter Grid.Column="1" Width="6"
+                          HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="Transparent" Cursor="SizeWE" />
+
             <!-- ─── RIGHT: TABBED PREVIEW / TRANSCODE ─── -->
-            <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+            <Border Grid.Column="2" Style="{StaticResource CardStyle}">
                 <TabControl Background="Transparent" BorderThickness="0">
 
                     <!-- Tab: Preview -->
@@ -353,6 +359,25 @@
                     </TextBlock>
                 </StackPanel>
             </DockPanel>
+        </Border>
+
+        <!-- ═══ BUSY OVERLAY ═══ -->
+        <Border x:Name="BusyOverlay" Grid.RowSpan="5"
+                Background="#CC111827" CornerRadius="12"
+                Visibility="Collapsed"
+                IsHitTestVisible="True" Panel.ZIndex="99">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True"
+                             Width="220" Height="8"
+                             HorizontalAlignment="Center" />
+                <TextBlock x:Name="BusyStatusText"
+                           FontSize="16" FontWeight="SemiBold"
+                           Foreground="White" HorizontalAlignment="Center"
+                           Margin="0,16,0,0" />
+                <TextBlock Text="Please wait..."
+                           FontSize="12" Foreground="#AAAAAA"
+                           HorizontalAlignment="Center" Margin="0,4,0,0" />
+            </StackPanel>
         </Border>
 
         <!-- ═══ DROP OVERLAY ═══ -->

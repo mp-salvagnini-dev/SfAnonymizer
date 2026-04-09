@@ -26,7 +26,14 @@ public partial class MainWindow : Window
         _vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(_vm.IsBusy))
+            {
                 Mouse.OverrideCursor = _vm.IsBusy ? Cursors.Wait : null;
+                BusyOverlay.Visibility = _vm.IsBusy ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (e.PropertyName == nameof(_vm.StatusMessage))
+            {
+                BusyStatusText.Text = _vm.StatusMessage;
+            }
         };
     }
 

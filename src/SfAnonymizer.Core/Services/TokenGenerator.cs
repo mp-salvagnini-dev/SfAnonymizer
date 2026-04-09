@@ -38,6 +38,8 @@ public sealed class TokenGenerator
             SensitiveDataCategory.PersonName      => "PERSON",
             SensitiveDataCategory.MachineType     => "MACH",
             SensitiveDataCategory.Custom          => "CUSTOM",
+            SensitiveDataCategory.PhoneNumber     => "PHONE",
+            SensitiveDataCategory.Email           => "EMAIL",
             _                                     => "ANON"
         };
 

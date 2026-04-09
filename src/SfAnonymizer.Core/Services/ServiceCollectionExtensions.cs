@@ -8,6 +8,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSfAnonymizerCore(this IServiceCollection services)
     {
         services.AddSingleton<ISensitiveColumnDetector, SalesforceColumnDetector>();
+        services.AddSingleton<IContentScanner, ContentScanner>();
         services.AddTransient<TokenGenerator>();
         services.AddTransient<IAnonymizationEngine, AnonymizationEngine>();
         services.AddTransient<IDeAnonymizationEngine, DeAnonymizationEngine>();

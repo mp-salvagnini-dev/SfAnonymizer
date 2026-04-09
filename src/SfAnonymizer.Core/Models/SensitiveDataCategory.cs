@@ -10,4 +10,7 @@ public enum SensitiveDataCategory
     PersonName,
     MachineType,
     Custom,
+    // Used internally for content scanning in description-like columns
+    PhoneNumber,
+    Email,
 }

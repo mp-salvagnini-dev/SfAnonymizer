@@ -51,17 +51,40 @@ public sealed class DeAnonymizationEngine : IDeAnonymizationEngine
             {
                 var value = originalRow.GetValueOrDefault(header, string.Empty);
 
-                if (reverseMapsByColumn.TryGetValue(header, out var reverseMap)
-                    && reverseMap.TryGetValue(value, out var original))
+                if (!reverseMapsByColumn.TryGetValue(header, out var reverseMap))
                 {
-                    newRow[header] = original;
+                    newRow[header] = value;
+                    continue;
+                }
+
+                // Try whole-cell lookup first (standard columns)
+                if (reverseMap.TryGetValue(value, out var wholeMatch))
+                {
+                    newRow[header] = wholeMatch;
                     restoredCells++;
                     affectedRowSet.Add(rowIdx);
                     affectedColumnSet.Add(header);
+                    continue;
                 }
-                else
+
+                // Inline replacement: replace every known token found within the cell text
+                var restored = value;
+                var anyReplaced = false;
+                foreach (var (token, original) in reverseMap)
                 {
-                    newRow[header] = value;
+                    if (restored.Contains(token, StringComparison.OrdinalIgnoreCase))
+                    {
+                        restored = restored.Replace(token, original, StringComparison.OrdinalIgnoreCase);
+                        anyReplaced = true;
+                    }
+                }
+
+                newRow[header] = restored;
+                if (anyReplaced)
+                {
+                    restoredCells++;
+                    affectedRowSet.Add(rowIdx);
+                    affectedColumnSet.Add(header);
                 }
             }
 
