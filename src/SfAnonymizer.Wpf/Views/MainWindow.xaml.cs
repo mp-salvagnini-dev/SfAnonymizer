@@ -43,9 +43,12 @@ public partial class MainWindow : Window
     {
         // WPF interprets dots in property paths, so "Account.Name" would try to bind to Account.Name property.
         // Using indexed binding [ColumnName] bypasses path parsing and binds directly by column name.
+        // SortMemberPath must be the plain column name (no brackets) so BindingListCollectionView can resolve
+        // the correct PropertyDescriptor on DataRowView when the user clicks a column header to sort.
         if (e.Column is DataGridTextColumn col)
         {
             col.Binding = new Binding($"[{e.PropertyName}]");
+            col.SortMemberPath = e.PropertyName;
         }
     }
 
